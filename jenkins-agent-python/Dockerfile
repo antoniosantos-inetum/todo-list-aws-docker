@@ -9,6 +9,4 @@ COPY --from=agent /usr/share/jenkins/agent.jar /usr/share/jenkins/agent.jar
 
 RUN python -m pip install awscli
 
-RUN mkdir ~/.aws
-
 ENTRYPOINT ["/usr/local/bin/jenkins-agent"]
