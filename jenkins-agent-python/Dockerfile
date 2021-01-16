@@ -7,6 +7,6 @@ RUN apk -U add openjdk8-jre docker git alpine-sdk libffi-dev openssl-dev build-b
 COPY --from=agent /usr/local/bin/jenkins-agent /usr/local/bin/jenkins-agent
 COPY --from=agent /usr/share/jenkins/agent.jar /usr/share/jenkins/agent.jar
 
-RUN python -m pip install awscli
+RUN python -m pip install awscli aws-sam-cli
 
 ENTRYPOINT ["/usr/local/bin/jenkins-agent"]

@@ -2,7 +2,6 @@ JENKINS_DOCKER_AGENT_SECRET := be1d27a29051b6fd6ce9bf840af0da0da439f6bbb0eefd1bb
 JENKINS_PYTHON_AGENT_SECRET := cc89b4c59c0205f2a09eeaefa01355e27201e140e405b520e88c577a5b9cde3a
 
 build-agents:
-	docker build -t jenkins-agent-docker ./jenkins-agent-docker
 	docker build -t jenkins-agent-python ./jenkins-agent-python
 
 start-jenkins:
@@ -17,7 +16,6 @@ jenkins-password:
 	docker exec jenkins-server cat /var/jenkins_home/secrets/initialAdminPassword && echo ""
 
 stop-jenkins:
-	docker stop jenkins-agent-docker || true
 	docker stop jenkins-agent-python || true
 	docker stop dynamodb-local || true
 	docker stop jenkins-docker || true
