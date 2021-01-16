@@ -1,0 +1,34 @@
+pipeline {
+    agent {
+        label 'python'
+    }
+    stages {
+        stage('Clean'){    
+            steps {
+                deleteDir()
+                sh 'printenv'
+            }
+        }
+        stage('Setup Credentials'){    
+            steps {
+                sh "aws configure --profile default set aws_access_key_id antoniosantos-inetum"
+                writeFile (file: '/root/.aws/credentials', text: "${env.CREDENTIALS}")
+            }
+        }
+        stage('Validate Credentials'){    
+            steps {
+                sh """
+                aws configure list --profile default
+                aws s3 ls --profile default
+                """
+            }
+        }
+        stage('Validate software'){    
+            steps {
+                sh 'aws --version'
+                sh 'sam --version'
+                sh 'python3.8 --version'
+            }
+        }
+    }
+}

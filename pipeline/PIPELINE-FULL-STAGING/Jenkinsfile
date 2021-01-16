@@ -1,0 +1,117 @@
+pipeline {
+    agent {
+        label 'python'
+    }
+    stages {
+        stage('Clean'){    
+            steps {
+                deleteDir()
+                sh 'printenv'
+            }
+        }
+        stage('Checkout') {
+            steps {
+                // Get some code from a CodeCommit repository
+                git branch: 'develop',
+                    credentialsId: 'codecommit-user',
+                    url: 'https://git-codecommit.us-east-1.amazonaws.com/v1/repos/todo-list-aws.git'
+            }
+        }
+        stage('SetUp'){
+            steps {
+                // Setup Virtualenv for testing
+                sh "python3.8 -m venv ."
+                
+                sh """
+                . bin/activate
+                pip install -r tests/unit/requirements.txt
+                """
+            }
+        }
+        stage('Test'){
+            stages {
+                stage('Radon') {
+                    steps {
+                        sh """
+                        . bin/activate
+                        radon cc todos/*.py
+                        """
+                        sh """
+                        . bin/activate
+                        radon mi todos/*.py
+                        """
+                        sh """
+                        . bin/activate
+                        radon raw todos/*.py
+                        """
+                        sh """
+                        . bin/activate
+                        radon hal todos/*.py
+                        """
+                    }
+                }
+                stage('Flake8') {
+                    steps {
+                        sh """
+                        . bin/activate
+                        flake8 todos/*.py
+                        """
+                    }
+                }
+                stage('Bandit') {
+                    steps {
+                        sh """
+                        . bin/activate
+                        bandit todos/*.py
+                        """
+                    }
+                }
+                stage('PyTest') {
+                    steps {
+                        dir('tests/unit') {
+                            sh """
+                            . ../../bin/activate
+                            export DYNAMODB_ENDPOINT_URL=http://dynamodb-local:8000 && python -m coverage run -m unittest TestToDo.py -v
+                            """
+                        }
+                    }
+                }
+                stage('Coverage') {
+                    steps {
+                        dir('tests/unit') {
+                            sh """
+                            . ../../bin/activate
+                            python -m coverage report
+                            python -m coverage html
+                            """
+                        }
+                    }
+                }
+            }
+        }
+        stage('Build') {
+            steps {
+                // Build release
+                sh "sam build"
+                // Package release and persist in s3 bucket
+                sh "sam package --output-template-file packaged.yaml --s3-bucket aws-sam-cli-managed-default-samclisourcebucket-17vv570hrllxo --s3-prefix todo-list-aws --region us-east-1" 
+            }
+        }
+        stage('Deploy'){
+            steps {
+                // Deploy architecture
+                sh "yes | sam deploy -t packaged.yaml --stack-name ${env.STACK_NAME}-stage --confirm-changeset --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset --parameter-overrides EnvironmentType=Stage"
+            }
+        }
+        stage('Cleanup after Execute'){    
+            steps {
+                deleteDir()
+            }
+        }
+    }
+    post {
+        always {
+            deleteDir()
+        }
+    }
+}
